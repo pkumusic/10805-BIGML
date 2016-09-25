@@ -1,6 +1,20 @@
 // Author: Music
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+
 import java.io.*;
 import java.util.*;
+
 
 public class NBTrain{
 
@@ -66,15 +80,18 @@ public class NBTrain{
         return tokens;
     }
 
-
-
-    public static void main(String[] args) throws Exception{
+    public static void main1(String[] args) throws Exception{
         // Prints "Hello, World" to the terminal window.
         System.out.println("Program started");
         NBTrain nbTrain =new NBTrain();
         // Load data
         // System.out.println(new File(".").getCanonicalPath()); // Find the root path
         //String train_pjath = "StreamNB/RCV1/RCV1.small_train.txt";
+
+        // java NBTrain ../RCV1/RCV1.small_train.txt
+        if(args.length != 1){
+            System.out.println("E.g. java NBTrain ../RCV1/RCV1.small_train.txt");
+        }
         String train_path = args[0];
         nbTrain.train(train_path);
 
