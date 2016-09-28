@@ -122,6 +122,6 @@ class NB(Planner):
 
 # always end like this
 if __name__ == "__main__":
-    NB().main(sys.argv)
+    NB().main(sys.argv) #
 
 # supporting routines can go here
