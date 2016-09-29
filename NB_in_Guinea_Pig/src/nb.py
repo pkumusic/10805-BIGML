@@ -29,7 +29,8 @@ def get_hash(accum, label):
     return accum
 
 def get_hash1(accum, x):
-    accum[x[0]] = accum.get(x[0], 0) + 1
+    (label, word, count) = x
+    accum[label] = accum.get(label, 0) + count
     return accum
 
 def calc_max_prob(accum, x):
@@ -109,11 +110,12 @@ class NB(Planner):
     # (word, {label:count})
     event_counter = Group(event, by=lambda (label, word, count):word, reducingTo=ReduceTo(dict, by=lambda accum, x:hash_label_count(accum, x)))
     ## Global
-    num_words = Map(label_word_pair, by=lambda (label, word): word) | Distinct() | Group(by=lambda x: "num_words",
+    num_words = Map(event, by=lambda (label, word, count): word) | Distinct() | Group(by=lambda x: "num_words",
                                                                                          reducingTo=ReduceToCount(),
                                                                                    combiningTo=ReduceToCount())
     # ('label_words', hashmap)
-    label_words_hash = Group(label_word_pair, by=lambda x:"label_words", reducingTo=ReduceTo(dict, by=lambda accum,x:get_hash1(accum, x)))
+    #label_words_hash = Group(label_word_pair, by=lambda x:"label_words", reducingTo=ReduceTo(dict, by=lambda accum,x:get_hash1(accum, x)))
+    label_words_hash = Group(event, by=lambda (label,word,count):"label_words", reducingTo=ReduceTo(dict, by=lambda accum,x:get_hash1(accum, x)))
     # ('label_docs', hashmap)
     label_docs_hash = Flatten(train_lines, by=label_doc) | Group(by=lambda x:"label_docs", reducingTo=ReduceTo(dict, by=lambda accum,x:get_hash(accum, x)))
     label_priors = Map(label_docs_hash, by=lambda (_, hashmap): ("label_priors", get_priors(hashmap)))
