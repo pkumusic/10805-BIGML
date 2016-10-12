@@ -22,8 +22,14 @@ public class LR {
         // TODO: Add Bias
         String line;
         int k = 0;
+        float init_lambda = lambda;
+        int total_size = max_iter * train_size;
+        int epoch = 0;
         while ((line = in.readLine()) != null) {
             k += 1;
+            if(k > total_size) break;
+            if(k % train_size == 1) epoch += 1;
+            lambda = init_lambda / (epoch * epoch);
             String[] infos = line.split("\t");
             String[] labels = infos[1].split(",");
             String doc = infos[2];
@@ -31,7 +37,7 @@ public class LR {
             HashMap<Integer, Integer> x = new HashMap<Integer, Integer>();
             for (String token: tokens){
                 int hash = word2hash(N, token);
-                if(x.containsKey(hash)){x.put(hash, x.get(hash)+1);}
+                if(x.containsKey(hash)){continue;}
                 else{x.put(hash, 1);}
             }
             for (String label: label_A.keySet()) {
@@ -47,7 +53,7 @@ public class LR {
                 for (int hash : x.keySet()) {
                     accum += B[hash] * x.get(hash);
                 }
-                double p = sigmoid(-accum);
+                double p = sigmoid(accum);
                 for (int hash : x.keySet()) {
                     B[hash] *= Math.pow((double) (1 - 2 * lambda * mu), (double) (k - A[hash]));
                     B[hash] += lambda * (y - p) * x.get(hash);
@@ -137,10 +143,12 @@ public class LR {
                 for (int hash : x.keySet()) {
                     accum += B[hash] * x.get(hash);
                 }
-                double p = sigmoid(-accum);
+                double p = sigmoid(accum);
+                if (p>0.5){
                 if (count == 0) System.out.print(label + "\t" + new Double(p).toString());
                 else System.out.print(',' + label + "\t" + new Double(p).toString());
                 count += 1;
+                }
             }
             System.out.println();
         }
@@ -179,6 +187,9 @@ public class LR {
         System.out.println(i);
     }
     public void print(String s){
+        System.out.println(s);
+    }
+    public void print(float s){
         System.out.println(s);
     }
     public void print(Set<String> set){
