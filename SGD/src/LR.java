@@ -12,14 +12,13 @@ public class LR {
     public void initialize(int N, String labels){
         String[] ls = labels.split(" ");
         for (String l:ls){
-            label_A.put(l, new int[N]);
-            label_B.put(l, new double[N]);
+            label_A.put(l, new int[N+1]);
+            label_B.put(l, new double[N+1]);
         }
         return;
     }
 
     public void train(BufferedReader in, int N, float lambda, float mu, int max_iter, int train_size) throws IOException {
-        // TODO: Add Bias
         String line;
         int k = 0;
         float init_lambda = lambda;
@@ -40,6 +39,7 @@ public class LR {
                 if(x.containsKey(hash)){continue;}
                 else{x.put(hash, 1);}
             }
+            x.put(N, 1); // add bias
             for (String label: label_A.keySet()) {
                 // for each label
                 // if label in labels, y=1; else y=0
@@ -55,7 +55,11 @@ public class LR {
                 }
                 double p = sigmoid(accum);
                 for (int hash : x.keySet()) {
-                    B[hash] *= Math.pow((double) (1 - 2 * lambda * mu), (double) (k - A[hash]));
+                    if(hash == N){
+                        B[hash] += lambda * (y - p) * x.get(hash); //update bias
+                        continue;
+                    }
+                    B[hash] *= Math.pow((double) (1 - lambda * mu), (double) (k - A[hash]));
                     B[hash] += lambda * (y - p) * x.get(hash);
                     A[hash] = k;
                 }
@@ -66,7 +70,8 @@ public class LR {
             int[] A = label_A.get(label);
             double[] B = label_B.get(label);
             for (int i=0; i<N; i++){
-                B[i] *= Math.pow((double) (1 - 2 * lambda * mu), (double) (k - A[i]));
+                B[i] *= Math.pow((double) (1 - lambda * mu), (double) (k - A[i]));
+                A[i] = k;
             }
         }
 
@@ -132,11 +137,12 @@ public class LR {
                 if(x.containsKey(hash)){x.put(hash, x.get(hash)+1);}
                 else{x.put(hash, 1);}
             }
+            x.put(N, 1); // add bias
             int count = 0;
-            for (String label:labels){
-                System.out.print(label + ",");
-            }
-            System.out.print(": ");
+//            for (String label:labels){
+//                System.out.print(label + ",");
+//            }
+//            System.out.print(": ");
             for (String label: label_A.keySet()) {
                 double[] B = label_B.get(label);
                 double accum = 0;
@@ -144,11 +150,11 @@ public class LR {
                     accum += B[hash] * x.get(hash);
                 }
                 double p = sigmoid(accum);
-                if (p>0.5){
+//                if (p>0.5){
                 if (count == 0) System.out.print(label + "\t" + new Double(p).toString());
                 else System.out.print(',' + label + "\t" + new Double(p).toString());
                 count += 1;
-                }
+//                }
             }
             System.out.println();
         }
@@ -158,7 +164,7 @@ public class LR {
 
     public static void main(String[] args) throws Exception{
         // Prints "Hello, World" to the terminal window.
-        System.out.println("Program started");
+        //System.out.println("Program started");
         // dictionary_size:N, learning_rate:lambda, regularization:mu, max_iter, train_size, test_file
         if(args.length != 6){
             System.out.println(args.length);
