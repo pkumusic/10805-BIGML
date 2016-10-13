@@ -12,8 +12,8 @@ public class LR {
     public void initialize(int N, String labels){
         String[] ls = labels.split(" ");
         for (String l:ls){
-            label_A.put(l, new int[N+1]);
-            label_B.put(l, new double[N+1]);
+            label_A.put(l, new int[N]);
+            label_B.put(l, new double[N]);
         }
         return;
     }
@@ -39,7 +39,7 @@ public class LR {
                 if(x.containsKey(hash)){continue;}
                 else{x.put(hash, 1);}
             }
-            x.put(N, 1); // add bias
+            //x.put(N, 1); // add bias
             for (String label: label_A.keySet()) {
                 // for each label
                 // if label in labels, y=1; else y=0
@@ -51,16 +51,16 @@ public class LR {
                 }
                 double accum = 0;
                 for (int hash : x.keySet()) {
-                    accum += B[hash] * x.get(hash);
+                    accum += B[hash];
                 }
                 double p = sigmoid(accum);
                 for (int hash : x.keySet()) {
-                    if(hash == N){
-                        B[hash] += lambda * (y - p) * x.get(hash); //update bias
-                        continue;
-                    }
-                    B[hash] *= Math.pow((double) (1 - lambda * mu), (double) (k - A[hash]));
-                    B[hash] += lambda * (y - p) * x.get(hash);
+                    //if(hash == N){
+                    //    B[hash] += lambda * (y - p) * x.get(hash); //update bias
+                    //    continue;
+                    //}
+                    B[hash] *= Math.pow((double) (1 - 2 * lambda * mu), (double) (k - A[hash]));
+                    B[hash] += lambda * (y - p);
                     A[hash] = k;
                 }
             }
@@ -70,7 +70,7 @@ public class LR {
             int[] A = label_A.get(label);
             double[] B = label_B.get(label);
             for (int i=0; i<N; i++){
-                B[i] *= Math.pow((double) (1 - lambda * mu), (double) (k - A[i]));
+                B[i] *= Math.pow((double) (1 - 2 * lambda * mu), (double) (k - A[i]));
                 A[i] = k;
             }
         }
@@ -134,10 +134,10 @@ public class LR {
             HashMap<Integer, Integer> x = new HashMap<Integer, Integer>();
             for (String token: tokens){
                 int hash = word2hash(N, token);
-                if(x.containsKey(hash)){x.put(hash, x.get(hash)+1);}
+                if(x.containsKey(hash)){continue;}
                 else{x.put(hash, 1);}
             }
-            x.put(N, 1); // add bias
+            //x.put(N, 1); // add bias
             int count = 0;
 //            for (String label:labels){
 //                System.out.print(label + ",");
@@ -147,7 +147,7 @@ public class LR {
                 double[] B = label_B.get(label);
                 double accum = 0;
                 for (int hash : x.keySet()) {
-                    accum += B[hash] * x.get(hash);
+                    accum += B[hash];
                 }
                 double p = sigmoid(accum);
 //                if (p>0.5){
@@ -184,7 +184,7 @@ public class LR {
         LR lr =new LR();
         String labels = "Agent other Organisation TimePeriod Device Activity ChemicalSubstance MeanOfTransportation SportsSeason Biomolecule Work CelestialBody Event Person Species Place Location";
         lr.initialize(N, labels);
-        lr.train(in, N, lambda, mu, max_iter, train_size);
+        lr.train(in, N, lambda, mu/2, max_iter, train_size);
         lr.test(test_file, N);
 
     }
