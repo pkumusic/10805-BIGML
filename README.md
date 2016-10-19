@@ -9,4 +9,7 @@ HW2: Naive Bayes using GuineaPig
 * Python
 * GuineaPig (Which is a python version of PIG developed by the instructor)
 
+HW3: Lazy update regularized SGD
+* Java
+
 
