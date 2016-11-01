@@ -16,9 +16,6 @@
  *   Order does NOT matter.
  */
 
-import com.sun.prism.shader.Solid_TextureSecondPassLCD_Loader;
-
-import java.awt.*;
 import java.io.*;
 import java.util.*;
 import java.util.List;
@@ -54,7 +51,7 @@ public class ApproxPageRank {
                 String[] nodes = line.split("\t");
                 String node = nodes[0];
                 int degree = nodes.length - 1;
-                if(degree == 0) continue;
+                //if(degree == 0) continue;
                 if(r.containsKey(node) && (r.get(node)/degree > epsilon) ){
                     push(node, nodes, degree);
                     stop = false;
