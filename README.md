@@ -17,4 +17,7 @@ HW4: Efficient Approximate PageRank
 * Java 1.8
 * Gephi for visualization communities.
 
+HW5: MLP and LSTM for character level entity classification
+* Python
+* Auto differentiation
 
