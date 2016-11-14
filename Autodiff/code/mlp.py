@@ -19,7 +19,7 @@ class MLP(object):
     def __init__(self, layer_sizes):
         self.my_xman = self._build(layer_sizes) # DO NOT REMOVE THIS LINE. Store the output of xman.setup() in this variable
 
-    def _build(self, layer_sizes, n=10):
+    def _build(self, layer_sizes, n=10): # n is used for debugging gradients. Overwritten when getting True inputs
         xm = XMan()
         #TODO define your model here
         # 0 -> 1 -> 2

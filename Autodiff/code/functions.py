@@ -22,6 +22,16 @@ class f(XManFunctions):
     @staticmethod
     def matrix_mul(x1, x2):
         return XManFunctions.registerDefinedByOperator('matrix_mul',x1,x2)
+    @staticmethod
+    def sigmoid(x):
+        return XManFunctions.registerDefinedByOperator('sigmoid', x)
+    @staticmethod
+    def tanh(x):
+        return XManFunctions.registerDefinedByOperator('tanh', x)
+    @staticmethod
+    def ele_mul(x1, x2):
+        return XManFunctions.registerDefinedByOperator('ele_mul', x1, x2)
+
 
 # the functions that autograd.eval will use to evaluate each function,
 # to be called with the functions actual inputs as arguments
@@ -45,7 +55,10 @@ EVAL_FUNS = {
     'crossEnt': lambda p,t: _crossEnt(p, t),
     'softMax':  lambda p: _softMax(p),
     'relu': lambda a: a * (a>0),
-    'matrix_mul': np.dot
+    'matrix_mul': np.dot,
+    'sigmoid': lambda x: 1 / (1+np.exp(-x)),
+    'tanh': np.tanh,
+    'ele_mul': np.multiply,
     }
 
 # the functions that autograd.bprop will use in reverse mode
@@ -77,5 +90,8 @@ BP_FUNS = {
                          lambda delta,out,p,y: 1], # Would not be used.
     'relu': [lambda delta,out,x: delta * np.ones(x.shape) * (x>0)],
     'matrix_mul': [lambda delta,out,x1,x2:np.dot(delta, x2.T),
-                   lambda delta,out,x1,x2:np.dot(x1.T, delta)]
+                   lambda delta,out,x1,x2:np.dot(x1.T, delta)],
+    'sigmoid': [lambda delta, out, x: delta * out * (1-out)],
+    'tanh': [lambda delta, out, x: delta * (1 - out * out)],
+    'ele_mul': [lambda delta, out, x1, x2: delta * x2, lambda delta, out, x1, x2: delta * x1],
     }
