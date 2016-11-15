@@ -7,7 +7,8 @@ import numpy as np
 from xman import *
 from utils import *
 from autograd import *
-
+from copy import deepcopy
+import pickle
 np.random.seed(0)
 
 class LSTM(object):
@@ -67,12 +68,9 @@ class LSTM(object):
         xm.o = f.relu(f.matrix_mul(getattr(xm, 'h'+str(t)), xm.w2) + xm.b2)
         xm.p = f.softMax(xm.o)
         xm.loss = f.crossEnt(xm.p, xm.y)
-
-
-
         return xm.setup()
 
-def main(params):
+def main(params, check_grad=False, test=False):
     epochs = params['epochs']
     max_len = params['max_len']
     num_hid = params['num_hid']
@@ -95,30 +93,90 @@ def main(params):
     print "building lstm..."
     lstm = LSTM(max_len,mb_train.num_chars,num_hid,mb_train.num_labels)
     #TODO CHECK GRADIENTS HERE
-
+    if check_grad:
+        epsilon = 1e-4
+        print "Checking gradients..."
+        my_xman = lstm.my_xman
+        wengert_list = my_xman.operationSequence(my_xman.loss)
+        print wengert_list
+        value_dict = my_xman.inputDict()
+        print 'input keys:', value_dict.keys()
+        ad = Autograd(my_xman)
+        value_dict = ad.eval(wengert_list, value_dict)
+        print 'eval keys:', value_dict.keys()
+        gradients = ad.bprop(wengert_list, value_dict, loss=np.float_(1.))
+        print 'grad keys:', gradients.keys()
+        # for key in ['b0','b1','w0','w1']:
+        #     new_value_dict = value_dict.
     # train
     print "training..."
     # get default data and params
-    value_dict = lstm.my_xman.inputDict()
+    my_xman = lstm.my_xman
+    value_dict = my_xman.inputDict()
     lr = init_lr
-    for i in range(epochs):
-        for (idxs,e,l) in mb_train:
-            #TODO prepare the input and do a fwd-bckwd pass over it and update the weights
+    ad = Autograd(my_xman)
+    wengert_list = my_xman.operationSequence(my_xman.loss)
+    min_val_loss = float('Inf')
+    opt_value_dict = {}
+    print "Wengert List:", wengert_list
+    if not test:
+        for i in range(epochs):
+            for (idxs,e,l) in mb_train:
+                #prepare the input and do a fwd-bckwd pass over it and update the weights
+                prepare_input(e, l, value_dict, max_len, num_hid)
+                value_dict = ad.eval(wengert_list, value_dict)
+                gradients = ad.bprop(wengert_list, value_dict, loss=np.float_(1.))
+                #print "Training loss:", value_dict['loss']
+                for key in gradients:
+                    if my_xman.isParam(key):
+                        value_dict[key] -= lr * gradients[key]
 
-        # validate
-        for (idxs,e,l) in mb_valid:
-            #TODO prepare the input and do a fwd pass over it to compute the loss
-
-        #TODO compare current validation loss to minimum validation loss
-        # and store params if needed
-    print "done"
-
+            # validate
+            for (idxs,e,l) in mb_valid:
+                #prepare the input and do a fwd pass over it to compute the loss
+                prepare_input(e, l, value_dict, max_len, num_hid)
+                value_dict = ad.eval(wengert_list, value_dict)
+                print "%sth Epoch Validation loss" % i, value_dict['loss']
+                # compare current validation loss to minimum validation loss
+                if value_dict['loss'] < min_val_loss:
+                    print "Update min val loss and store new params"
+                    min_val_loss = value_dict['loss']
+                    opt_value_dict = deepcopy(value_dict)
+        print "Training done"
+        print "Save optimized value dict into disk"
+        pickle.dump(opt_value_dict, open('lstm_opt_dict', 'w'))
+        print "done"
+    if not test:
+        value_dict = opt_value_dict
+    if test:
+        value_dict = pickle.load(open('mlp_opt_dict', 'r'))
     for (idxs,e,l) in mb_test:
         # prepare input and do a fwd pass over it to compute the output probs
-        
-    #TODO save probabilities on test set
+        prepare_input(e, l, value_dict, max_len, num_hid)
+        value_dict = ad.eval(wengert_list, value_dict)
+        print "Test loss:", value_dict['loss']
+        true = np.argmax(l, axis=1)
+        predict = np.argmax(value_dict['p'], axis=1)
+        precision = float(np.sum(true == predict)) / len(true)
+        print "Precision:", precision
+
     # ensure that these are in the same order as the test input
-    #np.save(output_file, ouput_probabilities)
+    np.save(output_file, value_dict['p'])
+
+def prepare_input(e, l, value_dict, max_len, num_hid):
+    # e: N * M * V, need to be X_1 ~ X_m with N * V
+    # l: N * C
+    e, l = np.array(e), np.array(l)
+    for i in xrange(1, max_len+1):
+        value_dict['x'+str(i)] = e[:,i-1,:]
+    value_dict['y'] = l
+    n = e.shape[0]
+    value_dict['c0'] = np.zeros((n, num_hid))
+    value_dict['h0'] = np.zeros((n, num_hid))
+
+
+
+
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
