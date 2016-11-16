@@ -19,15 +19,18 @@ class MLP(object):
     def __init__(self, layer_sizes):
         self.my_xman = self._build(layer_sizes) # DO NOT REMOVE THIS LINE. Store the output of xman.setup() in this variable
 
-    def _build(self, layer_sizes, n=10): # n is used for debugging gradients. Overwritten when getting True inputs
+    def _build(self, layer_sizes, n=100): # n is used for debugging gradients. Overwritten when getting True inputs
         xm = XMan()
         #TODO define your model here
         # 0 -> 1 -> 2
         #     w0,b0  w1,b1
         # o0 -> o1-> o2
-        print "Number of layers including input and output: ", len(layer_sizes)
+        # print "Number of layers including input and output: ", len(layer_sizes)
         xm.o0 = f.input(name='o0', default=np.random.rand(n, layer_sizes[0])) # N * in_size
-        xm.y = f.input(name='y', default=np.random.rand(n, layer_sizes[-1]))
+        one_hot = np.random.choice(layer_sizes[-1], n)
+        default_y = np.zeros((n, layer_sizes[-1]))
+        default_y[np.arange(n), one_hot] = 1
+        xm.y = f.input(name='y', default=default_y)
         for i in xrange(len(layer_sizes)-1):
             din, dout = layer_sizes[i], layer_sizes[i+1]
             a = (6.0 / (din + dout)) ** 0.5
@@ -36,7 +39,25 @@ class MLP(object):
             setattr(xm, 'o'+str(i+1), f.relu(f.matrix_mul(getattr(xm, 'o'+str(i)), getattr(xm, 'w'+str(i)))+getattr(xm, 'b'+str(i))))
         xm.p = f.softMax(getattr(xm, 'o'+str(i+1)))
         xm.loss = f.crossEnt(xm.p, xm.y)
+
         return xm.setup()
+
+def check_gradient(key, value_dict, ad, wengert_list, gradients, epsilon=1e-8):
+    for index, value in np.ndenumerate(value_dict[key]):
+        value_dict[key][index] += epsilon
+        big = ad.eval(wengert_list, value_dict)['loss']
+        value_dict[key][index] -= (2 * epsilon)
+        small = ad.eval(wengert_list, value_dict)['loss']
+        value_dict[key][index] += epsilon
+        assert abs(value - value_dict[key][index]) < 0.0000001
+        diff = abs((big-small) / (2*epsilon) - gradients[key][index])
+        print 'manual grad:', (big-small) / (2*epsilon)
+        print 'auto grad:', gradients[key][index]
+        print diff
+        #if diff > 0.001:
+        #    return False
+    exit()
+    return True
 
 def main(params, check_grad=False, test=False):
     epochs = params['epochs']
@@ -63,21 +84,21 @@ def main(params, check_grad=False, test=False):
     mlp = MLP([max_len*mb_train.num_chars,num_hid,mb_train.num_labels])
     #TODO CHECK GRADIENTS HERE
     if check_grad:
-        epsilon = 1e-4
         print "Checking gradients..."
         my_xman = mlp.my_xman
-        wengert_list = my_xman.operationSequence(my_xman.loss)
-        print wengert_list
-        value_dict = my_xman.inputDict()
-        print 'input keys:', value_dict.keys()
         ad = Autograd(my_xman)
+        wengert_list = my_xman.operationSequence(my_xman.loss)
+        value_dict = my_xman.inputDict()
         value_dict = ad.eval(wengert_list, value_dict)
-        print 'eval keys:', value_dict.keys()
         gradients = ad.bprop(wengert_list, value_dict, loss=np.float_(1.))
-        print 'grad keys:', gradients.keys()
-        # for key in ['b0','b1','w0','w1']:
-        #     new_value_dict = value_dict.
-
+        print 'Wengert List: ', wengert_list
+        check_gradient('b1', value_dict, ad, wengert_list, gradients)
+        for key in value_dict:
+            if my_xman.isParam(key):
+                if check_gradient(key, value_dict, ad, wengert_list, gradients):
+                    print key + ' passed gradient checking'
+                else:
+                    print key + ' failed gradient checking'
     print "done"
 
     # train
@@ -136,8 +157,8 @@ def main(params, check_grad=False, test=False):
                     min_val_loss = value_dict['loss']
                     opt_value_dict = deepcopy(value_dict)
         print "Training done"
-        print "Save optimized value dict into disk"
-        pickle.dump(opt_value_dict, open('mlp_opt_dict', 'w'))
+        #print "Save optimized value dict into disk"
+        #pickle.dump(opt_value_dict, open('mlp_opt_dict', 'w'))
 
     # Read the optimized params
     if not test:

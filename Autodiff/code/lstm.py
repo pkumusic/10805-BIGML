@@ -25,7 +25,10 @@ class LSTM(object):
         #define inputs x_1, x_2, ..., x_{max_len}
         for i in xrange(1, max_len+1):
             setattr(xm, 'x'+str(i), f.input(name='x'+str(i), default=np.random.rand(n, in_size)))
-        xm.y = f.input(name='y', default=np.random.rand(n, out_size))
+        one_hot = np.random.choice(out_size, n)
+        default_y = np.zeros((n, out_size))
+        default_y[np.arange(n), one_hot] = 1
+        xm.y = f.input(name='y', default=default_y)
 
         # define parameters for gates and candidate weights
         w_i =  (6.0 / (in_size + num_hid)) ** 0.5
@@ -143,8 +146,8 @@ def main(params, check_grad=False, test=False):
                     min_val_loss = value_dict['loss']
                     opt_value_dict = deepcopy(value_dict)
         print "Training done"
-        print "Save optimized value dict into disk"
-        pickle.dump(opt_value_dict, open('lstm_opt_dict', 'w'))
+        #print "Save optimized value dict into disk"
+        #pickle.dump(opt_value_dict, open('lstm_opt_dict', 'w'))
         print "done"
     if not test:
         value_dict = opt_value_dict
@@ -168,7 +171,7 @@ def prepare_input(e, l, value_dict, max_len, num_hid):
     # l: N * C
     e, l = np.array(e), np.array(l)
     for i in xrange(1, max_len+1):
-        value_dict['x'+str(i)] = e[:,i-1,:]
+        value_dict['x'+str(i)] = e[:,max_len-i,:]
     value_dict['y'] = l
     n = e.shape[0]
     value_dict['c0'] = np.zeros((n, num_hid))

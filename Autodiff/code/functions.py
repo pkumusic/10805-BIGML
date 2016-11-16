@@ -41,10 +41,10 @@ def _crossEnt(p, t): # x1: True label
     return -np.sum(t * np.log(p)) / t.shape[0]
 
 def _softMax(x):
-    x = x - np.max(x, axis=1).reshape(-1,1)
-    x = np.exp(x)
-    x = x / np.sum(x, axis=1).reshape(-1,1)
-    #print x
+    #x = x - np.max(x, axis=1, keepdims=True)
+    #x = np.exp(x)
+    #x = x / np.sum(x, axis=1, keepdims=True)
+    x = np.exp(x) / np.sum(np.exp(x), axis=1, keepdims=True)
     return x
 
 
@@ -79,16 +79,17 @@ def _derivAdd(delta,x1):
         # broadcast, sum along axis=0
         if delta.shape[1]!=x1.shape[0]:
             raise ValueError("Dimension Mismatch")
-        return delta.sum(axis=0) #we sum the gradients over the batch
+        return delta.sum(axis=0) # delta.shape[0]
+        #delta.sum(axis=0) #we sum the gradients over the batch
     else: return delta
 
 BP_FUNS = {
     'add':              [lambda delta,out,x1,x2: _derivAdd(delta,x1),    lambda delta,out,x1,x2: _derivAdd(delta,x2)],
     'subtract':         [lambda delta,out,x1,x2: _derivAdd(delta,x1),    lambda delta,out,x1,x2: -_derivAdd(delta,x2)],
     'square':           [lambda delta,out,x : delta * 2.0 * x],
-    'crossEnt-softMax': [lambda delta,out,p,y:  delta * (p-y) / p.shape[0],
-                         lambda delta,out,p,y: 1], # Would not be used.
-    'relu': [lambda delta,out,x: delta * np.ones(x.shape) * (x>0)],
+    'crossEnt-softMax': [lambda delta,out,o,y: delta * (_softMax(o)-y) / y.shape[0],
+                         lambda delta,out,o,y: -delta * np.log(_softMax(o)) / y.shape[0]], # Would not be used.
+    'relu': [lambda delta,out,x: delta * (x>0)],
     'matrix_mul': [lambda delta,out,x1,x2:np.dot(delta, x2.T),
                    lambda delta,out,x1,x2:np.dot(x1.T, delta)],
     'sigmoid': [lambda delta, out, x: delta * out * (1-out)],
