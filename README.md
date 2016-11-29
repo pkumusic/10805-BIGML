@@ -21,3 +21,6 @@ HW5: MLP and LSTM for character level entity classification
 * Python
 * Auto differentiation
 
+HW6: Phrase Finding with Spark
+* Python
+* Spark
